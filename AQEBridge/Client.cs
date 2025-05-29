@@ -21,19 +21,23 @@ namespace AQEBridge
 
 			_udpClient = new(port);
 			_endpoint = new IPEndPoint(IPAddress.Any, port);
+			
 		}
+
 
 		public async Task Start()
 		{
 			await _client.ConnectAsync(_connector);
-			
+			Console.WriteLine("Connected");
+
 			foreach (var item in _client.Devices)
 			{
 				Console.WriteLine(item.Name);
 			}
 			while (true)
 			{
-				byte[] data =  _udpClient.Receive(ref _endpoint);
+				var r = await _udpClient.ReceiveAsync();
+				byte[] data = r.Buffer;
 				float value = BitConverter.ToSingle(data, 0);
 				Console.WriteLine($"Received: {value}");
 

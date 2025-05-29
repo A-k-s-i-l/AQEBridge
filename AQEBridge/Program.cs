@@ -11,7 +11,7 @@
 
             Console.WriteLine("Hello, World!");
             c = new(54321);
-            c.Start();
+            c.Start().Wait();
             Console.ReadKey();
         }
     }
