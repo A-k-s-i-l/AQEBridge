@@ -32,25 +32,43 @@ namespace AQEBridge
 
 			foreach (var item in _client.Devices)
 			{
+				
 				Console.WriteLine(item.Name);
 			}
 			while (true)
 			{
-				var r = await _udpClient.ReceiveAsync();
+				var delayTask = Task.Delay(150);
+				var receiveTask = _udpClient.ReceiveAsync();
+
+				var completed = await Task.WhenAny(delayTask, receiveTask);
+
+				if (completed == delayTask)
+				{
+					SetVibration(0);
+					Console.WriteLine("Timed out...");
+					continue;
+				}
+				var r = await receiveTask;
 				byte[] data = r.Buffer;
 				float value = BitConverter.ToSingle(data, 0);
 				Console.WriteLine($"Received: {value}");
 
 
-				if(_client.Devices is null)
-					continue;
-				foreach (var device in _client.Devices)
-				{
-					_= device.VibrateAsync(value);
-					
-				}
+				SetVibration(value);
 			}
 
+		}
+
+		private void SetVibration(float value)
+		{
+
+			if (_client.Devices is null)
+				return;
+			foreach (var device in _client.Devices)
+			{
+				_ = device.VibrateAsync(value);
+
+			}
 		}
 
 	}
