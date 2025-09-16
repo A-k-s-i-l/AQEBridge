@@ -7,12 +7,13 @@ namespace AQEBridge
 	public class Client
 	{
 		private ButtplugClient _client;
+		private UI _ui;
 		ButtplugWebsocketConnector _connector;
 
 		UdpClient _udpClient;
 		IPEndPoint _endpoint;
 
-		public Client(int port)
+		public Client(int port, UI ui)
 		{
 
 			Uri uri = new Uri("ws://localhost:12345");
@@ -21,20 +22,15 @@ namespace AQEBridge
 
 			_udpClient = new(port);
 			_endpoint = new IPEndPoint(IPAddress.Any, port);
-			
+			this._ui = ui;
 		}
 
 
 		public async Task Start()
 		{
 			await _client.ConnectAsync(_connector);
-			Console.WriteLine("Connected");
 
-			foreach (var item in _client.Devices)
-			{
-				
-				Console.WriteLine(item.Name);
-			}
+
 			while (true)
 			{
 				var delayTask = Task.Delay(150);
@@ -44,19 +40,27 @@ namespace AQEBridge
 
 				if (completed == delayTask)
 				{
-					SetVibration(0);
-					Console.WriteLine("Timed out...");
+					Handle(null, ConnectionStatus.GameNotConnected);
+
 					continue;
 				}
 				var r = await receiveTask;
 				byte[] data = r.Buffer;
 				float value = BitConverter.ToSingle(data, 0);
-				Console.WriteLine($"Received: {value}");
 
-
-				SetVibration(value);
+				Handle(value, _client.Connected ? ConnectionStatus.Connected : ConnectionStatus.Disconnected);
 			}
 
+		}
+
+		private void Handle(float? vibrationValue, ConnectionStatus status)
+		{
+			SetVibration(vibrationValue ?? 0);
+
+			_ui.Strength = vibrationValue ?? _ui.Strength;
+			_ui.Status = status;
+			_ui.Devices = _client.Devices?.ToList() ?? new List<ButtplugClientDevice>();
+			_ui.Update();
 		}
 
 		private void SetVibration(float value)
